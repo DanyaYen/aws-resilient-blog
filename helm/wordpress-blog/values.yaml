@@ -1,0 +1,20 @@
+wordpress:
+  image:
+    repository: wordpress
+    tag: latest
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: LoadBalancer
+    port: 80
+
+  externalDatabase:
+    host: ""
+    user: "admin"
+    password: ""
+    database: "wordpressdb"
+
+  persistence:
+    enabled: true
+    storageClass: "gp2"
+    size: 10Gi

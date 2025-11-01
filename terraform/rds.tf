@@ -40,7 +40,7 @@ resource "aws_db_instance" "main_db" {
   identifier           = "main-db-instance"
   engine               = "mariadb"
   engine_version       = "10.6"
-  instance_class       = "db.t2.micro"
+  instance_class       = "db.t3.micro"
   allocated_storage    = 20
   db_name              = "wordpressdb"
   username             = "admin"

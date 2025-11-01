@@ -1,0 +1,59 @@
+{{- if .Values.wordpress.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Release.Name }}-wordpress-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: {{ .Values.wordpress.persistence.storageClass }}
+  resources:
+    requests:
+      storage: {{ .Values.wordpress.persistence.size }}
+---
+{{- end }}
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-wordpress
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: wordpress
+  template:
+    metadata:
+      labels:
+        app: wordpress
+    spec:
+      containers:
+        - name: wordpress
+          image: "{{ .Values.wordpress.image.repository }}:{{ .Values.wordpress.image.tag }}"
+          imagePullPolicy: {{ .Values.wordpress.image.pullPolicy }}
+
+          env:
+            - name: WORDPRESS_DB_HOST
+              value: {{ .Values.wordpress.externalDatabase.host }}
+            - name: WORDPRESS_DB_USER
+              value: {{ .Values.wordpress.externalDatabase.user }}
+            - name: WORDPRESS_DB_PASSWORD
+              value: {{ .Values.wordpress.externalDatabase.password }}
+            - name: WORDPRESS_DB_NAME
+              value: {{ .Values.wordpress.externalDatabase.database }}
+          
+          ports:
+            - containerPort: 80
+            
+          {{- if .Values.wordpress.persistence.enabled }}
+          volumeMounts:
+            - name: wordpress-persistent-storage
+              mountPath: /var/www/html
+          {{- end }}
+      
+      {{- if .Values.wordpress.persistence.enabled }}
+      volumes:
+        - name: wordpress-persistent-storage
+          persistentVolumeClaim:
+            claimName: {{ .Release.Name }}-wordpress-pvc
+      {{- end }}
