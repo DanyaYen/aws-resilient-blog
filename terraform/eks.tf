@@ -76,7 +76,7 @@ resource "aws_eks_node_group" "main_node_group" {
   node_role_arn   = aws_iam_role.eks_node_role.arn
   subnet_ids      = [aws_subnet.private_a.id, aws_subnet.private_b.id]
 
-  instance_types = ["t2.micro"]
+  instance_types = ["t3.small"]
 
   scaling_config {
     desired_size = 2
@@ -102,9 +102,8 @@ resource "aws_iam_openid_connect_provider" "eks_oidc_provider" {
   url             = aws_eks_cluster.main_cluster.identity[0].oidc[0].issuer
 }
 
-# --- ПАУЗА ---
 resource "time_sleep" "wait_for_oidc" {
-  create_duration = "60s" # 60 секунд. Если опять упадет, можно увеличить до 90s
+  create_duration = "60s"
 
   depends_on = [
     aws_iam_openid_connect_provider.eks_oidc_provider
@@ -112,7 +111,6 @@ resource "time_sleep" "wait_for_oidc" {
 }
 
 # --- IAM EBS CSI DRIVER---
-# --- ИЗМЕНЕН ЭТОТ РЕСУРС ---
 resource "aws_iam_role" "ebs_csi_driver_role" {
   name = "eks-ebs-csi-driver-role"
 
@@ -134,15 +132,11 @@ resource "aws_iam_role" "ebs_csi_driver_role" {
     ]
   })
 
-  # --- ДОБАВЛЕНА ЭТА ЗАВИСИМОСТЬ ---
-  # Заставляем саму РОЛЬ ждать, пока 60-секундная пауза не пройдет
   depends_on = [
     time_sleep.wait_for_oidc
   ]
 }
-# -------------------------
 
-# --- ИЗМЕНЕН ЭТОТ РЕСУРС ---
 resource "aws_iam_role_policy_attachment" "ebs_csi_driver_policy_attachment" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
   role       = aws_iam_role.ebs_csi_driver_role.name
