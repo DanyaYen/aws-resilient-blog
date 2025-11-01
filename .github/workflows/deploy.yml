@@ -48,7 +48,6 @@ jobs:
               run: |
                   RDS_HOST=$(terraform -chdir=./terraform output -raw rds_endpoint | cut -d: -f1)
                   echo "RDS_HOST=$RDS_HOST" >> $GITHUB_ENV
-              working-directory: ./terraform
 
             - name: Deploy Helm Chart
               run: |
