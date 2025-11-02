@@ -35,8 +35,9 @@ jobs:
         run: terraform init
         working-directory: ./terraform
 
+      # --- ИЗМЕНЕНИЕ ЗДЕСЬ ---
       - name: Terraform Apply
-        run: terraform apply -auto-approve
+        run: terraform apply -auto-approve -var="db_password=${{ secrets.DB_PASSWORD }}"
         working-directory: ./terraform
 
       - name: Update Kubeconfig
@@ -48,11 +49,12 @@ jobs:
           RDS_HOST=$(terraform -chdir=./terraform output -raw rds_endpoint | cut -d: -f1)
           echo "RDS_HOST=$RDS_HOST" >> $GITHUB_ENV
 
+      # --- И ИЗМЕНЕНИЕ ЗДЕСЬ ---
       - name: Deploy Helm Chart
         run: |
           helm upgrade --install my-blog ./helm/wordpress-blog \
             --set wordpress.externalDatabase.host=${{ env.RDS_HOST }} \
-            --set wordpress.externalDatabase.password="YourSuperSecurePassword123!"
+            --set wordpress.externalDatabase.password="${{ secrets.DB_PASSWORD }}"
 
       - name: Install eksctl
         run: |

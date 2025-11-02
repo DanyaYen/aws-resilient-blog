@@ -44,7 +44,7 @@ resource "aws_db_instance" "main_db" {
   allocated_storage    = 20
   db_name              = "wordpressdb"
   username             = "admin"
-  password             = "YourSuperSecurePassword123!"
+  password             = var.db_password
   db_subnet_group_name = aws_db_subnet_group.main_db_subnet_group.name
   vpc_security_group_ids = [aws_security_group.rds_sg.id]
   skip_final_snapshot  = true
