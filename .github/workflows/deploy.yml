@@ -66,5 +66,4 @@ jobs:
             --region eu-central-1 \
             --arn arn:aws:iam::011782265654:user/devops-admin \
             --group system:masters \
-            --username devops-admin \
-            --no-duplicate-arn
+            --username devops-admin
