@@ -1,56 +1,70 @@
 name: Deploy Infrastructure and Application
 
 on:
-    push:
-        branches:
-            - main
-    workflow_dispatch:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
-    deploy:
-        runs-on: ubuntu-latest
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-central-1
 
-            - name: Configure AWS Credentials
-              uses: aws-actions/configure-aws-credentials@v4
-              with:
-                  aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-                  aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-                  aws-region: eu-central-1
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.13.3
 
-            - name: Setup Terraform
-              uses: hashicorp/setup-terraform@v3
-              with:
-                  terraform_version: 1.13.3
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
 
-            - name: Setup Helm
-              uses: azure/setup-helm@v4
+      - name: Setup Kubectl
+        uses: azure/setup-kubectl@v4
 
-            - name: Setup Kubectl
-              uses: azure/setup-kubectl@v4
+      - name: Terraform Init
+        run: terraform init
+        working-directory: ./terraform
 
-            - name: Terraform Init
-              run: terraform init
-              working-directory: ./terraform
+      - name: Terraform Apply
+        run: terraform apply -auto-approve
+        working-directory: ./terraform
 
-            - name: Terraform Apply
-              run: terraform apply -auto-approve
-              working-directory: ./terraform
+      - name: Update Kubeconfig
+        run: aws eks --region eu-central-1 update-kubeconfig --name main-cluster
 
-            - name: Update Kubeconfig
-              run: aws eks --region eu-central-1 update-kubeconfig --name main-cluster
+      - name: Get RDS Endpoint
+        id: get_rds
+        run: |
+          RDS_HOST=$(terraform -chdir=./terraform output -raw rds_endpoint | cut -d: -f1)
+          echo "RDS_HOST=$RDS_HOST" >> $GITHUB_ENV
 
-            - name: Get RDS Endpoint
-              id: get_rds
-              run: |
-                  RDS_HOST=$(terraform -chdir=./terraform output -raw rds_endpoint | cut -d: -f1)
-                  echo "RDS_HOST=$RDS_HOST" >> $GITHUB_ENV
+      - name: Deploy Helm Chart
+        run: |
+          helm upgrade --install my-blog ./helm/wordpress-blog \
+            --set wordpress.externalDatabase.host=${{ env.RDS_HOST }} \
+            --set wordpress.externalDatabase.password="YourSuperSecurePassword123!"
 
-            - name: Deploy Helm Chart
-              run: |
-                  helm upgrade --install my-blog ./helm/wordpress-blog \
-                    --set wordpress.externalDatabase.host=${{ env.RDS_HOST }} \
-                    --set wordpress.externalDatabase.password="YourSuperSecurePassword123!"
+      - name: Install eksctl
+        run: |
+          curl --silent --location "https://github.com/weaveworks/eksctl/releases/latest/download/eksctl_$(uname -s)_amd64.tar.gz" | tar xz -C /tmp
+          sudo mv /tmp/eksctl /usr/local/bin
+
+      - name: Add local user to EKS aws-auth
+        run: |
+          eksctl create iamidentitymapping \
+            --cluster main-cluster \
+            --region eu-central-1 \
+            --arn arn:aws:iam::011782265654:user/devops-admin \
+            --group system:masters \
+            --username devops-admin \
+            --no-duplicate-arn
