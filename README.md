@@ -16,7 +16,7 @@ The pipeline automatically builds the infrastructure from scratch, deploys the a
 
 ### 🎥 Live Demo
 
-**[>>> WATCH THE DEMO VIDEO HERE <<<](https://your-video-link.com)**
+**[>>> WATCH THE DEMO VIDEO HERE <<<](https://youtu.be/pzN2N2qUQcg)**
 
 _(This video demonstrates the full CI/CD pipeline, from a `git push` to an automated `helm upgrade` scaling the WordPress pods, with live monitoring in Grafana.)_
 
